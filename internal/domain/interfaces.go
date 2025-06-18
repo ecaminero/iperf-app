@@ -1,23 +1,12 @@
 package domain
 
 import (
+	"context"
 	"iperf-app/internal/domain/entities"
 )
 
-type ScriptRepository interface {
-	GetAll() ([]entities.Script, error)
-	GetByName(name string) (*entities.Script, error)
-	Save(script *entities.Script) error
-	Delete(name string) error
-}
-
-type ConfigRepository interface {
-	Load() (*entities.Config, error)
-	Save(config *entities.Config) error
-}
-
-type ExecutionRepository interface {
-	Save(execution *entities.Execution) error
-	GetByID(id string) (*entities.Execution, error)
-	GetHistory(limit int) ([]entities.Execution, error)
+// Executor define la interfaz común para ejecutar comandos
+type Executor interface {
+	Execute(ctx context.Context, commands []string) (*entities.IExecutionResult, error)
+	ExecuteWithWorkDir(ctx context.Context, commands []string, workDir string) (*entities.IExecutionResult, error)
 }

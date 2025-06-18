@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"iperf-app/internal/infrastructure/cli/ui"
+	"iperf-app/internal/infrastructure/executors"
 	"os"
 	"strings"
 )
 
 func main() {
-	fmt.Print(" _                  __\n(_)_ __   ___ _ __ / _|   __ _ _ __  _ __\n| | '_ \\ / _ \\ '__| |_   / _` | '_ \\| '_ \\\n| | |_) |  __/ |  |  _| | (_| | |_) | |_) |\n|_| .__/ \\___|_|  |_|    \\__,_| .__/| .__/\n  |_|                         |_|   |_|")
 	scanner := bufio.NewScanner(os.Stdin)
+	commandExecutor := executors.NewCommandExecutor()
 
 	for {
 		ui.MainMenu()
@@ -29,7 +30,7 @@ func main() {
 		case "4":
 			showIperfP2PMenu()
 		case "5":
-			showDiagnosticMenu()
+			showDiagnosticMenu(commandExecutor)
 		case "6":
 			fmt.Println("handleOpenFolder()")
 		case "7":
@@ -108,7 +109,7 @@ func showIperfP2PMenu() {
 	}
 }
 
-func showDiagnosticMenu() {
+func showDiagnosticMenu(commandExecutor *executors.CommandExecutor) {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
@@ -124,8 +125,7 @@ func showDiagnosticMenu() {
 
 		switch option {
 		case "1":
-			fmt.Println("handleDiagPing()")
-
+			handleDiagPing(commandExecutor)
 		case "2":
 			fmt.Println("handleDiagTraceroute()")
 		case "3":
@@ -144,4 +144,33 @@ func showDiagnosticMenu() {
 			scanner.Scan()
 		}
 	}
+}
+
+func handleDiagPing(commandExecutor *executors.CommandExecutor) {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	fmt.Print("Indicar la direccion IP del servidor (predeterminado 10.255.30.3): ")
+	scanner.Scan()
+	ipserver := strings.TrimSpace(scanner.Text())
+	if ipserver == "" {
+		ipserver = "10.255.30.3"
+	}
+
+	count := 4 // valor por defecto
+	result, err := commandExecutor.ExecutePing(ipserver, count)
+	if err != nil {
+		fmt.Printf("Error ejecutando ping: %v\n", err)
+		if result != nil && result.ErrorOutput != "" {
+			fmt.Printf("Detalles del error:\n%s\n", result.ErrorOutput)
+		}
+	} else {
+		fmt.Println("Ping completado exitosamente")
+		if result.Output != "" {
+			fmt.Printf("Resultado:\n%s\n", result.Output)
+		}
+	}
+
+	fmt.Println()
+	fmt.Print("Presione Enter para continuar...")
+	scanner.Scan()
 }

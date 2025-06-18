@@ -1,31 +1,22 @@
 package entities
 
-type Config struct {
-	App       AppConfig       `yaml:"app"`
-	Execution ExecutionConfig `yaml:"execution"`
-	Scripts   ScriptsConfig   `yaml:"scripts"`
-	Iperf     IperfConfig     `yaml:"iperf"`
-}
+import "time"
 
-type AppConfig struct {
-	Name     string `yaml:"name"`
-	Version  string `yaml:"version"`
-	LogLevel string `yaml:"log_level"`
-}
+type ExecutionStatus string
 
-type ExecutionConfig struct {
-	Timeout          string   `yaml:"timeout"`
-	WorkingDirectory string   `yaml:"working_directory"`
-	Environment      []string `yaml:"environment_variables"`
-}
+const (
+	StatusPending   ExecutionStatus = "pending"
+	StatusRunning   ExecutionStatus = "running"
+	StatusCompleted ExecutionStatus = "completed"
+	StatusFailed    ExecutionStatus = "failed"
+)
 
-type ScriptsConfig struct {
-	Directory       string `yaml:"directory"`
-	ConfigDirectory string `yaml:"config_directory"`
-}
-
-type IperfConfig struct {
-	DefaultServers map[string]string `yaml:"default_servers"`
-	DefaultTimeout int               `yaml:"default_timeout"`
-	DefaultPath    string            `yaml:"default_path"`
+type IExecutionResult struct {
+	ID          string
+	StartTime   time.Time
+	EndTime     time.Time
+	Status      ExecutionStatus
+	Output      string
+	ErrorOutput string
+	ExitCode    int
 }
