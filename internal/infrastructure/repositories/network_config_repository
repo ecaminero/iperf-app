@@ -1,0 +1,100 @@
+package repositories
+
+import (
+	"context"
+	"fmt"
+	"github.com/google/uuid"
+	"iperf-app/internal/domain"
+	"net"
+	"strings"
+	"time"
+)
+
+type NetworkConfigRepository struct {
+	cmdRepo domain.CommandRepository
+}
+
+func NewNetworkConfigRepository(cmdRepo domain.CommandRepository) *NetworkConfigRepository {
+	return &NetworkConfigRepository{
+		cmdRepo: cmdRepo,
+	}
+}
+
+func (r *NetworkConfigRepository) SetStaticIP(ctx context.Context, iface *domain.NetworkInterface) error {
+	// Construir el comando netsh equivalente al script original:
+	// netsh interface ipv4 set address name="Ethernet" static 10.255.30.38 255.255.255.252 10.255.30.37
+
+	cmd := &domain.Command{
+		ID:     uuid.New().String(),
+		Script: "netsh",
+		Args: []string{
+			"interface",
+			"ipv4",
+			"set",
+			"address",
+			fmt.Sprintf("name=%s", iface.Name),
+			"static",
+			iface.IPAddress,
+			iface.SubnetMask,
+			iface.Gateway,
+		},
+		Timeout:   30 * time.Second,
+		CreatedAt: time.Now(),
+	}
+
+	result, err := r.cmdRepo.Execute(ctx, cmd)
+	if err != nil {
+		return fmt.Errorf("failed to execute netsh command: %w", err)
+	}
+
+	if result.ExitCode != 0 {
+		return fmt.Errorf("netsh command failed with exit code %d: %s", result.ExitCode, result.Error)
+	}
+
+	return nil
+}
+
+func (r *NetworkConfigRepository) GetInterfaceInfo(ctx context.Context, name string) (string, error) {
+	cmd := &domain.Command{
+		ID:     uuid.New().String(),
+		Script: "netsh",
+		Args: []string{
+			"interface",
+			"ipv4",
+			"show",
+			"addresses",
+			fmt.Sprintf("name=%s", name),
+		},
+		Timeout:   10 * time.Second,
+		CreatedAt: time.Now(),
+	}
+
+	result, err := r.cmdRepo.Execute(ctx, cmd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get interface info: %w", err)
+	}
+
+	if result.ExitCode != 0 {
+		return nil, fmt.Errorf("netsh command failed: %s", result.Error)
+	}
+	return result.Output, nil
+}
+
+func (r *NetworkConfigRepository) ValidateNetworkConfig(iface *domain.NetworkInterface) error {
+	if strings.TrimSpace(iface.Name) == "" {
+		return fmt.Errorf("interface name cannot be empty")
+	}
+	if net.ParseIP(iface.IPAddress) == nil {
+		return fmt.Errorf("invalid IP address: %s", iface.IPAddress)
+	}
+
+	if net.ParseIP(iface.SubnetMask) == nil {
+		return fmt.Errorf("invalid subnet mask: %s", iface.SubnetMask)
+	}
+
+	if net.ParseIP(iface.Gateway) == nil {
+		return fmt.Errorf("invalid gateway: %s", iface.Gateway)
+	}
+
+	return nil
+}
